@@ -141,11 +141,14 @@ module Rack
     def call env
       session = Session.new(env)
       request = Rack::Request.new env
+
+      dt_conf = @config.merge(@domain_idp[request.host])
+
       # saml_sp: SAML SP's entity_id
       # generate saml_sp from request uri and default path (rack-saml-sp)
       saml_sp_prefix = "#{request.scheme}://#{request.host}#{":#{request.port}" if request.port}#{request.script_name}"
-      @config['saml_sp'] ||= "#{saml_sp_prefix}/rack-saml-sp"
-      @config['assertion_consumer_service_uri'] ||= "#{saml_sp_prefix}#{@config['protected_path']}"
+      dt_conf['saml_sp'] ||= "#{saml_sp_prefix}/rack-saml-sp"
+      dt_conf['assertion_consumer_service_uri'] ||= "#{saml_sp_prefix}#{dt_conf['protected_path']}"
       # for debug
       #return [
       #  403,
@@ -160,11 +163,11 @@ module Rack
           if session.is_valid?('saml_res') # the client already has a valid session
             ResponseHandler.extract_attrs(env, session)
           else
-            if !@config['shib_ds'].nil? # use discovery service (ds)
+            if !dt_conf['shib_ds'].nil? # use discovery service (ds)
               if request.params['entityID'].nil? # start ds session
                 session.start('ds')
                 return Rack::Response.new.tap { |r|
-                  r.redirect "#{@config['shib_ds']}?entityID=#{URI.encode(@config['saml_sp'], /[^\w]/)}&return=#{URI.encode("#{@config['assertion_consumer_service_uri']}?target=#{session.get_sid('ds')}", /[^\w]/)}"
+                  r.redirect "#{dt_conf['shib_ds']}?entityID=#{URI.encode(dt_conf['saml_sp'], /[^\w]/)}&return=#{URI.encode("#{dt_conf['assertion_consumer_service_uri']}?target=#{session.get_sid('ds')}", /[^\w]/)}"
                 }.finish
               end
               if !session.is_valid?('ds', request.params['target']) # confirm ds session
@@ -173,25 +176,25 @@ module Rack
                 return create_response(500, 'text/html', "Internal Server Error: Invalid discovery service session current sid=#{current_sid}, request sid=#{request.params['target']}")
               end
               session.finish('ds')
-              @config['saml_idp'] = request.params['entityID']
+              dt_conf['saml_idp'] = request.params['entityID']
             end
             session.start('saml_authreq')
-            handler = RequestHandler.new(request, @config, @metadata['idp_lists'][@config['saml_idp']])
+            handler = RequestHandler.new(request, dt_conf, @metadata['idp_lists'][dt_conf['saml_idp']])
             return Rack::Response.new.tap { |r|
               r.redirect handler.authn_request.redirect_uri
             }.finish
           end
         elsif match_metadata_path?(request) # generate Metadata
-          handler = MetadataHandler.new(request, @config, @metadata['idp_lists'][@config['saml_idp']])
+          handler = MetadataHandler.new(request, dt_conf, @metadata['idp_lists'][dt_conf['saml_idp']])
           return create_response(200, 'application/samlmetadata+xml', handler.sp_metadata.generate)
         end
       elsif request.request_method == 'POST' && match_protected_path?(request) # process Response
         if session.is_valid?('saml_authreq')
-          handler = ResponseHandler.new(request, @config, @metadata['idp_lists'][@config['saml_idp']])
+          handler = ResponseHandler.new(request, dt_conf, @metadata['idp_lists'][dt_conf['saml_idp']])
           begin
             if handler.response.is_valid?
               session.finish('saml_authreq')
-              session.start('saml_res', @config['saml_sess_timeout'] || 1800)
+              session.start('saml_res', dt_conf['saml_sess_timeout'] || 1800)
               handler.extract_attrs(env, session, @attribute_map)
               return Rack::Response.new.tap { |r|
                 r.redirect request.url
