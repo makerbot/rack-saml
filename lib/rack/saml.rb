@@ -39,11 +39,12 @@ module Rack
     class ValidationError < StandardError
     end
 
-    FILE_TYPE = [:config, :metadata, :attribute_map]
+    FILE_TYPE = [:config, :metadata, :attribute_map, :domain_idp]
     FILE_NAME = {
       :config => 'rack-saml.yml',
       :metadata => 'metadata.yml',
-      :attribute_map => 'attribute-map.yml'
+      :attribute_map => 'attribute-map.yml',
+      :domain_idp => 'domain-idp.yml',
     }
 
     def default_config_path(config_file)
@@ -103,7 +104,7 @@ module Rack
         case type
         when 'ds'
           sid = generate_sid(4)
-        when 'saml_authreq' 
+        when 'saml_authreq'
           sid = generate_sid
         when 'saml_res'
           sid = generate_sid
