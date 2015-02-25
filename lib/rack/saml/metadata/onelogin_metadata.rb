@@ -11,7 +11,7 @@ module Rack
       end
 
       def generate
-        @sp_metadata.generate(saml_settings(@config))
+        @sp_metadata.generate(saml_settings(config))
       end
     end
   end

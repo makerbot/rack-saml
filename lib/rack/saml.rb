@@ -142,7 +142,7 @@ module Rack
       session = Session.new(env)
       request = Rack::Request.new env
 
-      dt_conf = @config.merge(@domain_idp[request.host])
+      dt_conf = @config.merge(@domain_idp[request.host] || {})
 
       # saml_sp: SAML SP's entity_id
       # generate saml_sp from request uri and default path (rack-saml-sp)

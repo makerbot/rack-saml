@@ -11,7 +11,7 @@ module Rack
       end
 
       def redirect_uri
-        @authrequest.create(saml_settings(@config))
+        @authrequest.create(saml_settings(config))
       end
     end
   end
