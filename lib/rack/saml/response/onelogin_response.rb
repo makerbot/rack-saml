@@ -11,7 +11,7 @@ module Rack
         @response = OneLogin::RubySaml::Response.new(@request.params['SAMLResponse'], {
           :allowed_clock_drift => config['allowed_clock_drift']
         })
-        @response.settings = saml_settings
+        @response.settings = saml_settings(config)
       end
 
       def is_valid?
