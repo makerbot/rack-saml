@@ -11,6 +11,20 @@ module Rack
         settings.idp_cert = @metadata['certificate']
         settings.name_identifier_format = "urn:oasis:names:tc:SAML:2.0:nameid-format:transient"
         #settings.authn_context = "urn:oasis:names:tc:SAML:2.0:ac:classes:PasswordProtectedTransport"
+
+        settings.certificate = ::File.read(@config['sp_cert'])
+        settings.private_key = ::File.read(@config['sp_key'])
+
+        settings.security[:authn_requests_signed] = true
+        settings.security[:logout_requests_signed] = true
+        settings.security[:logout_responses_signed] = true
+        settings.security[:metadata_signed] = true
+
+        settings.security[:digest_method] = XMLSecurity::Document::SHA1
+        settings.security[:signature_method] = XMLSecurity::Document::RSA_SHA1
+
+        settings.security[:embed_sign] = true
+
         settings
       end
     end
