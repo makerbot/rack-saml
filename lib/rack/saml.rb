@@ -159,7 +159,7 @@ module Rack
       #  ["Forbidden." + env.to_a.map {|i| "#{i[0]}: #{i[1]}"}.join("\n")]
       #]
       if request.request_method == 'GET'
-        if match_protected_path?(request) # generate AuthnRequest
+        if match_protected_path?(request, dt_conf) # generate AuthnRequest
           if session.is_valid?('saml_res') # the client already has a valid session
             ResponseHandler.extract_attrs(env, session)
           else
@@ -184,11 +184,11 @@ module Rack
               r.redirect handler.authn_request.redirect_uri
             }.finish
           end
-        elsif match_metadata_path?(request) # generate Metadata
+        elsif match_metadata_path?(request, dt_conf) # generate Metadata
           handler = MetadataHandler.new(request, dt_conf, @metadata['idp_lists'][dt_conf['saml_idp']])
           return create_response(200, 'application/samlmetadata+xml', handler.sp_metadata.generate)
         end
-      elsif request.request_method == 'POST' && match_protected_path?(request) # process Response
+      elsif request.request_method == 'POST' && match_protected_path?(request, dt_conf) # process Response
         if session.is_valid?('saml_authreq')
           handler = ResponseHandler.new(request, dt_conf, @metadata['idp_lists'][dt_conf['saml_idp']])
           begin
@@ -213,12 +213,12 @@ module Rack
       @app.call env
     end
 
-    def match_protected_path?(request)
-      request.path_info == @config['protected_path']
+    def match_protected_path?(request, config)
+      request.path_info == config['protected_path']
     end
 
-    def match_metadata_path?(request)
-      request.path_info == @config['metadata_path']
+    def match_metadata_path?(request, config)
+      request.path_info == config['metadata_path']
     end
 
     def create_response(code, content_type, message)
